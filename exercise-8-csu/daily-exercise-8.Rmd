@@ -1,0 +1,39 @@
+---
+title: "daily-exercise-8"
+author: "Eleanor Lindsey"
+date: "2025-02-21"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+#The purpose of this assignment is to use the Covid-19 data from the previous daily exercise to create and analyze data frames.
+```
+
+```{r}
+library(tidyverse)
+url = 'https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties-recent.csv'
+covid = read_csv(url)
+```
+
+```{r}
+df <- data.frame(region = state.region,
+                 abbr = state.abb,
+                 state = state.name) 
+print(df)
+```
+
+```{r}
+inner_join(df, covid, by = "state") %>%
+  group_by(region, date) %>%
+  summarize(cases = sum(cases),
+            deaths = sum(deaths)) %>%
+  pivot_longer(cols = c(cases, deaths),
+               names_to = "type",
+               values_to = "count") %>%
+  ggplot(aes(x = date, y = count)) +
+  geom_line() +
+  facet_grid(type~region, scales = "free_y")+
+  theme_bw()
+```
+

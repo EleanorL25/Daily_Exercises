@@ -1,0 +1,158 @@
+---
+title: "Exercise-11-csu"
+format: 
+  html:
+    self-contained: true
+editor: visual
+---
+
+## In this assignment, you will again analyze the `airquality` dataset using various statistical tests, data transformation techniques, and regression modeling. Follow the step-by-step guiding questions to complete the analysis in a qmd.
+
+## **Part 1: Normality Testing**
+
+1.  Load the airquality dataset in R. What does this dataset represent? Explore its structure using functions like `str()` and `summary()`.
+
+    ```{r}
+    airquality <-airquality
+    str(airquality)
+    summary(airquality)
+    ```
+
+2.  Perform a Shapiro-Wilk normality test on the following variables: `Ozone`, `Temp`, `Solar.R`, and `Wind.`
+
+    ```{r}
+      shapiro.test(airquality$Ozone) 
+    #data:  airquality$Ozone
+    #W = 0.87867, p-value = 2.79e-08
+      shapiro.test(airquality$Temp)
+      #data:  airquality$Temp
+    #W = 0.97617, p-value = 0.009319
+      shapiro.test(airquality$Solar.R)
+      #data:  airquality$Solar.R
+    #W = 0.94183, p-value = 9.492e-06
+      shapiro.test(airquality$Wind)
+      #data:  airquality$Wind
+    #W = 0.98575, p-value = 0.1178
+    ```
+
+3.  What is the purpose of the Shapiro-Wilk test?
+
+    1.  The purpose of the Shapiro-Wilk test is to determine whether a data set is normally distributed or not. This statistical analysis works best on small data sets as it is highly sensitive to deviations from a mean.
+
+4.  What are the null and alternative hypotheses for this test?
+
+    1.  Null: Data is normally distributed
+
+    2.  Alternative: The data is not normally distributed
+
+5.  Interpret the p-values. Are these variables normally distributed?
+
+    1.  The temperature analysis has a p-value of 0.009 which is smaller than 0.05 and is statistically significant because it assumes there is a very low chance of observing data as extreme under the conditions of the null. The same conclusion can be drawn from the p-values of ozone and solar radiation as the values of these tests are much smaller than 0.05. The p-value of the wind test is higher than 0.05 which indicates there is a high probability of the same results occurring under the conditions of the null. This value is considered statistically insignificant.
+
+        ```         
+        data:  airquality$Ozone
+        W = 0.87867, p-value = 2.79e-08
+
+        data:  airquality$Temp
+        W = 0.97617, p-value = 0.009319
+
+        data:  airquality$Solar.R
+        W = 0.94183, p-value = 9.492e-06
+
+        data:  airquality$Wind
+        W = 0.98575, p-value = 0.1178
+        ```
+
+## **Part 2: Data Transformation and Feature Engineering**
+
+6.  Create a new column with `case_when` translating the Months into four seasons (Winter (Nov, Dec, Jan), Spring (Feb, Mar, Apr), Summer (May, Jun, Jul), and Fall (Aug, Sep, Oct)).
+
+    ```{r}
+install.packages("dplyr") # Install if needed
+library(dplyr)
+seasonality <- airquality %>%
+      mutate(season = case_when(
+        Month %in% c(11, 12, 1) ~ "Winter",
+        Month %in% c(2, 3, 4) ~ "Spring",
+        Month %in% c(5, 6, 7) ~ "Summer",
+        Month %in% c(8, 9, 10) ~ "Fall"))
+
+    head(seasonality)
+    ```
+
+7.  Use `table` to figure out how many observations we have from each season.
+
+    ```{r}
+    table(seasonality$season)
+    ```
+
+## **Part 3: Data Preprocessing**
+
+8.  Normalize the predictor variables (Temp, Solar.R, Wind, and Season) using a `recipe`
+```{r}
+recipes::step_normalize(airquality$Temp)
+```
+
+
+9.  What is the purpose of normalizing data?
+  1.
+
+10. What function can be used to impute missing values with the mean?
+  1.
+
+11. `prep` and `bake` the data to generate a processed dataset.
+```{r}
+
+```
+
+
+12. Why is it necessary to both `prep()` and `bake()` the recipe?
+  1. 
+
+## **Part 4: Building a Linear Regression Model**
+
+13. Fit a linear model using Ozone as the response variable and all other variables as predictors. Remeber that the `.` notation can we used to include all variables.
+```{r}
+
+```
+
+
+14. Interpret the model summary output (coefficients, R-squared, p-values) in plain language
+  1.
+
+## **Part 5: Model Diagnostics**
+
+15. Use `broom::augment` to suppliment the normalized `data.frame` with the fitted values and residuals.
+```{r}
+
+```
+
+
+16. Extract the residuals and visualize their distribution as a histogram and qqplot.
+```{r}
+
+```
+
+
+17. Use `ggarange` to plot this as one image and interpret what you see in them.
+```{r}
+
+```
+
+
+18. Create a scatter plot of actual vs. predicted values using ggpubr with the following setting:
+```{r}
+
+```
+
+```         
+ggscatter(a, x = "Ozone", y = ".fitted",
+          add = "reg.line", conf.int = TRUE,
+          cor.coef = TRUE, cor.method = "spearman",
+          ellipse = TRUE)
+```
+
+19. How strong of a model do you think this is?
+  1.
+
+20. Render your document to HTML and submit to Canvas. Be sure to include this in your document yml:

@@ -1,0 +1,49 @@
+---
+title: "Exercise_5"
+author: "Eleanor Lindsey"
+format: html
+editor: visual
+---
+
+Attach the `palmerspenguins` package
+
+1\. Examine at the dataset using the ?Help page
+
+2\. what is the class of the penguins dataset?
+
+3\. what is the structure of the penguins dataset?
+
+4\. what are the dimensions of the penguins dataset?
+
+5\. what are the column names of the penguins dataset?
+
+6\. what type of data is `flipper_length_mm` and `Island`?
+
+7\. what is the mean flipper length of the penguins?
+
+8\. what is the standard deviation of flipper length in the penguins?
+
+9\. what is the median body mass of the penguins?
+
+10\. what is the Island of the 100th penguin?
+
+```{r}
+library('readr')
+read_csv('~/Documents/ESS330-Quantitative-Reasoning/github/exercise-5-csu/penguins.csv')
+```
+
+```{r}
+library(palmerpenguins)
+
+class(penguins)#what is the class of the penguins dataset?
+structure(penguins)#what is the structure of the penguins dataset?
+dim(penguins)#what are the dimensions of the penguins dataset? 
+class(penguins$flipper_length_mm)#what type of data is `flipper_length_mm` and `Island`?
+class(penguins$island)#what type of data is `flipper_length_mm` and `Island`?
+mean(penguins$flipper_length_mm, na.rm = TRUE)#what is the mean flipper length of the penguins?
+sd(penguins$flipper_length_mm, na.rm = TRUE)#what is the standard deviation of flipper length in the penguins?
+median(penguins$body_mass_g, na.rm=TRUE)#what is the median body mass of the penguins?
+penguins$island[100]#what is the Island of the 100th penguin?
+#Column names for the penguins data set
+#"species", "island", "bill_length_mm", "bill_depth_mm", "flipper_length_mm", "body_mass_g", "sex", "year"
+```
