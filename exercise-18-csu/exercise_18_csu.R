@@ -24,9 +24,10 @@ pop_url   <- 'https://www2.census.gov/programs-surveys/popest/datasets/2020-2023
 # Ingest
 
 data   <- readr::read_csv(covid_url)
-census_raw <- readr::read_csv(pop_url) 
+census <- readr::read_csv("~/Library/Mobile Documents/com~apple~CloudDocs/Documents/Documents - Eleanor MacBook Pro/ESS330-Quantitative-Reasoning/github/Daily_Exercises/co-est2023-alldata.csv")
 
-census<-census_raw%>%
+
+census_raw<-census%>%
   filter(COUNTY=='000')%>%
   mutate(fips=STATE)%>%
   select(fips, POPESTIMATE2021, DEATHS2021, BIRTHS2021)
@@ -36,7 +37,7 @@ state_data<-data%>%
   mutate(new_cases=pmax(0,cases-lag(cases)),
          new_deaths=pmax(0,deaths-lag(deaths)))%>%
   ungroup()%>%
-  left_join(census,by='fips')%>%
+  left_join(census_raw,by='fips')%>%
   mutate(y=year(date), m=month(date),
          season=case_when(
            m%in%c(12,1,2)~'Winter',
@@ -99,6 +100,8 @@ b_fit=workflow()%>%
 
 a=augment(b_fit, new_data=training)
 
-ggplot(a, aes(x=.pred, y=logC))+
-  geom_point() 
+ggplot(a, aes(x=.pred, y=season_cases))+
+  geom_point()+
+  geom_abline(intercept=0,slope=1,color='dodgerblue',linetype='dashed')+
+  ggtitle("Predicted vs Actual Season Cases")
 
