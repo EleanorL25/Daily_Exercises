@@ -25,7 +25,7 @@ poudre_flow <- readNWISdv(siteNumber = "06752260",    # Download data from USGS 
   summarise(Flow = mean(Flow))                       # Calculate the average daily flow for each month
 ```
 
-### Converting to a Tibble
+### Converting to a Tsibble
 
 ```{r}
 
