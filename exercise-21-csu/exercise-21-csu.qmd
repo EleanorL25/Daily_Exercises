@@ -1,7 +1,9 @@
 ---
 title: "exercise-21-csu"
 author: "Eleanor Lindsey"
-format: html
+format:
+  html:
+    self-contained: true
 execute:
   echo: true
 editor: visual
