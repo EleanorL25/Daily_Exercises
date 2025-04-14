@@ -1,0 +1,76 @@
+---
+title: "exercise-21-csu"
+author: "Eleanor Lindsey"
+format: html
+execute:
+  echo: true
+editor: visual
+---
+
+### Uploading the Data from USGS site 06752260
+
+```{r}
+options(repos = c(CRAN = "https://cran.rstudio.com/"))
+library(tsibble)
+library(dataRetrieval)
+library(dplyr)
+# Example: Cache la Poudre River at Mouth (USGS site 06752260)
+poudre_flow <- readNWISdv(siteNumber = "06752260",    # Download data from USGS for site 06752260
+                          parameterCd = "00060",      # Parameter code 00060 = discharge in cfs)
+                          startDate = "2013-01-01",   # Set the start date
+                          endDate = "2023-12-31") |>  # Set the end date
+  renameNWISColumns() |>                              # Rename columns to standard names (e.g., "Flow", "Date")
+  mutate(Date = yearmonth(Date)) |>                   # Convert daily Date values into a year-month format (e.g., "2023 Jan")
+  group_by(Date) |>                                   # Group the data by the new monthly Date
+  summarise(Flow = mean(Flow))                       # Calculate the average daily flow for each month
+```
+
+### Converting to a Tibble
+
+```{r}
+
+poudre_tsibble<-as_tsibble(poudre_flow)
+```
+
+### Plotting the Time Series
+
+```{r}
+library(ggplot2)
+library(plotly)
+poudre_plot<-ggplot(poudre_tsibble, aes(x=Date, y=Flow))+
+  geom_line(color="cornflowerblue")+
+  labs(title="Flow Data from the Cache La Poudre USGS site 06752260",
+       x="Date",
+       y="Flow (cfs)")
+ggplotly(poudre_plot)
+```
+
+### Sub Series
+
+```{r}
+install.packages("feasts")
+library(feasts)
+gg_subseries(poudre_tsibble)
+```
+
+Description:
+
+I see there is a defined pattern of high stream flow in May and June. Stream Flow is noticeably low from November to February. This makes sense as Colorado gets a lot of rain during the spring months including snow melt. This increase in precipitation increases stream discharge which will cause these spikes in data. Comparatively, the patterns of low stream flow can be explained by the periods of snow precipitation.
+
+### Decompose
+
+```{r}
+poudre_decompose<-poudre_tsibble%>%
+  model(STL(Flow ~ season(window="periodic")))%>%
+  components()
+poudre_decompose
+
+poudre_decompose_plot<-ggplot(poudre_decompose, aes(x=Date, y=season_adjust))+
+  geom_line(color="forestgreen")+
+  labs(title="Seaonsality and the Cache La Poudre", x="Date", y="Seasonality")
+ggplotly(poudre_decompose_plot)
+```
+
+Description:
+
+Seasonality is the best window to look at when analyzing this data because it had a very clear pattern. The data represents water that is coming from the mountains which experience defined high and low flows depending on the season. It is also see a change in precipitation and other weather events when looking at seasonality. As the graph above shows, there is a noticeable decrease in precipitation from January 2014 to January 2024. This type of pattern is important to analyze to better decide how Colorado should change it's water usage as we already have a deficit of available water.
