@@ -1,0 +1,143 @@
+---
+title: "exercise-22-csu"
+author: "Eleanor Lindsey"
+format:
+  html:
+    self-contained: true
+execute:
+  echo: true
+editor: visual
+---
+
+#### Load in Necessary Libraries and Data
+
+```{r}
+# Load libraries
+options(repos = c(CRAN = "https://cran.rstudio.com/"))
+library(dataRetrieval)
+library(dplyr)
+library(tsibble)
+library(tidymodels)
+library(modeltime)
+library(lubridate)
+library(timetk)
+library(prophet)
+library(forecast)
+library(zoo)
+
+# Download daily streamflow and aggregate to monthly
+poudre_flow <- readNWISdv(siteNumber = "06752260",
+                          parameterCd = "00060",
+                          startDate = "2013-01-01",
+                          endDate = "2023-12-31") %>%
+  renameNWISColumns() %>%
+  mutate(Date = as.Date(Date)) %>%
+  mutate(month = floor_date(Date, "month")) %>%
+  group_by(month) %>%
+  summarise(Flow = mean(Flow, na.rm = TRUE), .groups = "drop") %>%
+  rename(Date = month)
+
+# Convert to tsibble
+poudre_tsibble <- as_tsibble(poudre_flow, index = Date)
+
+
+```
+
+#### Model Making
+
+```{r}
+# Split the data
+splits <- initial_time_split(poudre_tsibble, prop = 0.92)
+
+# Define model specs
+poudre_arima_model <- arima_reg() %>% set_engine("auto_arima")
+poudre_prophet_model <- prophet_reg() %>% set_engine("prophet")
+
+# Fit models
+model_tbl <- modeltime_table(
+  fit(poudre_arima_model, Flow ~ Date, data = training(splits)),
+  fit(poudre_prophet_model, Flow ~ Date, data = training(splits))
+)
+
+```
+
+#### Get 2024 Daily Streamflow and Aggregate to Monthly
+
+```{r}
+# Download 2024 observed data
+poudre_2024 <- readNWISdv(siteNumber = "06752260",
+                          parameterCd = "00060",
+                          startDate = "2024-01-01",
+                          endDate = "2024-12-31") %>%
+  renameNWISColumns() %>%
+  mutate(Date = as.Date(Date)) %>%
+  mutate(month = floor_date(Date, "month")) %>%
+  group_by(month) %>%
+  summarise(observed_cfs = mean(Flow, na.rm = TRUE), .groups = "drop") %>%
+  rename(Date = month)
+
+```
+
+#### Forecast Next 12 Months and Aggregate to Monthly
+
+```{r}
+# Refit models on full data
+refit_tbl <- model_tbl %>% modeltime_refit(poudre_tsibble)
+
+# Create 12 months of future dates
+last_date <- max(poudre_tsibble$Date)
+future_dates <- tibble(Date = seq.Date(from = last_date %m+% months(1),
+                                       by = "month", length.out = 12))
+
+# Generate forecasts
+forecast_tbl <- refit_tbl %>%
+  modeltime_forecast(new_data = future_dates, actual_data = poudre_tsibble)
+
+# Aggregate forecasts to monthly means
+forecast_monthly <- forecast_tbl %>%
+  filter(.key == "prediction") %>%
+  mutate(month = floor_date(.index, "month")) %>%
+  group_by(month) %>%
+  summarise(predicted_cfs = mean(.value, na.rm = TRUE), .groups = "drop") %>%
+  rename(Date = month)
+
+```
+
+#### Compare Predictions with Observed Data & Calculate R²
+
+```{r}
+# Join observed and predicted data
+comparison_tbl <- left_join(forecast_monthly, poudre_2024, by = "Date") %>%
+  filter(!is.na(observed_cfs), !is.na(predicted_cfs))
+
+# Compute R² using linear model
+if (nrow(comparison_tbl) > 1) {
+  r2_model <- lm(observed_cfs ~ predicted_cfs, data = comparison_tbl)
+  r2_value <- summary(r2_model)$r.squared
+  cat("R² between predictions and observed values:", round(r2_value, 3), "\n")
+} else {
+  cat("Not enough overlapping data to compute R² — check monthly alignment.\n")
+}
+
+```
+
+R\^2 value of 0.85 which suggests the model is credible and produces reliable predictions.
+
+#### Last, generate a plot of the Predicted vs Observed values and include a 1:1 line, and a linear model line.
+
+```{r}
+# Plot predicted vs. observed
+poudre_comparison_plot<-ggplot(comparison_tbl, aes(x = predicted_cfs, y = observed_cfs)) +
+  geom_point(color = "darkgreen", size = 3) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
+  geom_smooth(method = "lm", se = FALSE, color = "blue", linewidth = 1) +
+  labs(
+    title = "Predicted vs Observed Streamflow (Monthly Averages, 2024)",
+    x = "Predicted Flow (cfs)",
+    y = "Observed Flow (cfs)"
+  ) +
+  theme_minimal(base_size = 14)
+
+poudre_comparison_plot
+
+```
